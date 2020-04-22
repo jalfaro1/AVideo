@@ -333,6 +333,7 @@ if (!class_exists('Video')) {
                     Video::autosetCategoryType($this->old_categories_id);
                 }
                 clearVideosURL($this->filename);
+                self::deleteThumbs($this->filename, true);
                 return $id;
             } else {
                 _error_log($sql . ' Save Video Error : (' . $global['mysqli']->errno . ') ' . $global['mysqli']->error . " $sql");
@@ -1092,6 +1093,7 @@ if (!class_exists('Video')) {
             $video = new Video("", "", $videos_id);
             $filename = $video->getFilename();
             if(empty($filename) || !($video->getType()=="video" || $video->getType()=="audio")){
+                _error_log("updateFilesize: Not updated, this filetype is ".$video->getType());
                 return false;
             }
             $filesize = getUsageFromFilename($filename);
@@ -1106,6 +1108,10 @@ if (!class_exists('Video')) {
                         return false;
                     }
                 }
+            }
+            if($video->getFilesize()==$filesize){
+                _error_log("updateFilesize: No need to update videos_id=$videos_id filename=$filename filesize=$filesize");
+                return $filesize;
             }
             $video->setFilesize($filesize);
             if($video->save(false, true)){
@@ -2318,7 +2324,7 @@ if (!class_exists('Video')) {
             $this->next_videos_id = $next_videos_id;
         }
 
-        function queue() {
+        function queue($types=array()) {
             global $config;
             if (!User::canUpload()) {
                 return false;
@@ -2337,8 +2343,12 @@ if (!class_exists('Video')) {
                 "notifyURL" => "{$global['webSiteRootURL']}"
             );
 
-            if (AVideoPlugin::isEnabledByName("VideoHLS")) {
+            if (empty($types) && AVideoPlugin::isEnabledByName("VideoHLS")) {
                 $postFields['inputHLS'] = 1;
+            }else if(!empty ($types)){
+                foreach ($types as $key => $value) {
+                    $postFields[$key] = $value;
+                }
             }
 
             _error_log("SEND To QUEUE: " . print_r($postFields, true));
@@ -2354,7 +2364,7 @@ if (!class_exists('Video')) {
             $obj->response = $r;
             if ($errno = curl_errno($curl)) {
                 $error_message = curl_strerror($errno);
-//echo "cURL error ({$errno}):\n {$error_message}";
+                //echo "cURL error ({$errno}):\n {$error_message}";
                 $obj->msg = "cURL error ({$errno}):\n {$error_message}";
             } else {
                 $obj->error = false;
@@ -2493,7 +2503,7 @@ if (!class_exists('Video')) {
             if (substr($type, -4) === ".jpg" || substr($type, -4) === ".png" || substr($type, -4) === ".gif" || substr($type, -4) === ".webp") {
                 $source['url'] .= "?" . @filectime($source['path']);
             }
-//ObjectYPT::setCache($name, $source);
+            //ObjectYPT::setCache($name, $source);
             return $source;
         }
 
@@ -2927,7 +2937,7 @@ if (!class_exists('Video')) {
             return $r;
         }
 
-        static function deleteThumbs($filename) {
+        static function deleteThumbs($filename, $doNotDeleteSprit = false) {
             if (empty($filename)) {
                 return false;
             }
@@ -2937,6 +2947,9 @@ if (!class_exists('Video')) {
             $files = glob("{$filePath}*_thumbs*.jpg");
             foreach ($files as $file) {
                 if (file_exists($file)) {
+                    if($doNotDeleteSprit && strpos($file, '_thumbsSprit.jpg') !== false){
+                        continue;
+                    }
                     @unlink($file);
                 }
             }

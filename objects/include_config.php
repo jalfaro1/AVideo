@@ -19,14 +19,16 @@ if(!empty($global['mysqli_charset'])){
     $global['mysqli']->set_charset($global['mysqli_charset']);
 }
 
-$now = new DateTime();
-$mins = $now->getOffset() / 60;
-$sgn = ($mins < 0 ? -1 : 1);
-$mins = abs($mins);
-$hrs = floor($mins / 60);
-$mins -= $hrs * 60;
-$offset = sprintf('%+d:%02d', $hrs * $sgn, $mins);
-$global['mysqli']->query("SET time_zone='$offset';");
+if(empty($global['disableTimeFix'])){
+    $now = new DateTime();
+    $mins = $now->getOffset() / 60;
+    $sgn = ($mins < 0 ? -1 : 1);
+    $mins = abs($mins);
+    $hrs = floor($mins / 60);
+    $mins -= $hrs * 60;
+    $offset = sprintf('%+d:%02d', $hrs * $sgn, $mins);
+    $global['mysqli']->query("SET time_zone='$offset';");
+}
 
 require_once $global['systemRootPath'] . 'objects/mysql_dal.php';
 require_once $global['systemRootPath'] . 'objects/configuration.php';
@@ -105,7 +107,7 @@ if ($baseName !== 'xsendfile.php' && class_exists("Plugin")) {
 if (empty($global['bodyClass'])) {
     $global['bodyClass'] = "";
 }
-$global['allowedExtension'] = array('gif', 'jpg', 'mp4', 'webm', 'mp3', 'ogg', 'zip');
+$global['allowedExtension'] = array('gif', 'jpg', 'mp4', 'webm', 'mp3','m4a', 'ogg', 'zip');
 $advancedCustom = AVideoPlugin::getObjectData("CustomizeAdvanced");
 $advancedCustomUser = AVideoPlugin::getObjectData("CustomizeUser");
 AVideoPlugin::loadPlugin("PlayerSkins");

@@ -37,6 +37,17 @@ $agreement = AVideoPlugin::loadPluginIfEnabled("SignUpAgreement");
                     <form class="form-compact well form-horizontal"  id="updateUserForm" onsubmit="">
                         <fieldset>
                             <legend><?php echo __("Sign Up"); ?></legend>
+                            <div class="form-group">
+                                <div class="col-md-12 inputGroupContainer">
+                                    <div class="input-group">
+                                        <?php
+                                        if (!empty($advancedCustomUser->messageToAppearAboveSignUpBox->value)) {
+                                            echo $advancedCustomUser->messageToAppearAboveSignUpBox->value;
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="form-group">
                                 <label class="col-md-4 control-label"><?php echo __("Name"); ?></label>
@@ -53,7 +64,7 @@ $agreement = AVideoPlugin::loadPluginIfEnabled("SignUpAgreement");
                                 <div class="col-md-8 inputGroupContainer">
                                     <div class="input-group">
                                         <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-                                        <input  id="inputUser" placeholder="<?php echo !empty($advancedCustomUser->forceLoginToBeTheEmail) ? "me@example.com" : __("User"); ?>" class="form-control"  type="<?php echo empty($advancedCustomUser->forceLoginToBeTheEmail) ? "text" : "email"; ?>" value="" required >
+                                        <input  id="inputUser" placeholder="<?php echo!empty($advancedCustomUser->forceLoginToBeTheEmail) ? "me@example.com" : __("User"); ?>" class="form-control"  type="<?php echo empty($advancedCustomUser->forceLoginToBeTheEmail) ? "text" : "email"; ?>" value="" required >
                                     </div>
                                 </div>
                             </div>
@@ -158,27 +169,27 @@ $agreement = AVideoPlugin::loadPluginIfEnabled("SignUpAgreement");
                                     if (response.status > 0) {
                                         swal({
                                             title: "<?php echo __("Congratulations!"); ?>",
-                                            text: "<?php echo __("Your user account has been created!"); ?><br><?php echo !empty($advancedCustomUser->unverifiedEmailsCanNOTLogin)?__("Sign in to your email to verify your account!"):""; ?>",
-                                            type: "success",
-                                            html: true
-                                        },
-                                                function () {
-                                                    window.location.href = '<?php echo $global['webSiteRootURL']; ?>user?redirectUri=<?php print isset($_GET['redirectUri']) ? $_GET['redirectUri'] : ""; ?>';
-                                                });
-                                    } else {
-                                        if (response.error) {
-                                            swal("<?php echo __("Sorry!"); ?>", response.error, "error");
-                                        } else {
-                                            swal("<?php echo __("Sorry!"); ?>", "<?php echo __("Your user has NOT been created!"); ?>", "error");
-                                        }
-                                    }
-                                    modal.hidePleaseWait();
-                                }
-                            });
-                            return false;
-                        }
-                    });
-                });
+                                            text: "<?php echo __("Your user account has been created!"); ?><br><?php echo!empty($advancedCustomUser->unverifiedEmailsCanNOTLogin) ? __("Sign in to your email to verify your account!") : ""; ?>",
+                                                                            type: "success",
+                                                                            html: true
+                                                                        },
+                                                                                function () {
+                                                                                    window.location.href = '<?php echo $global['webSiteRootURL']; ?>user?redirectUri=<?php print isset($_GET['redirectUri']) ? $_GET['redirectUri'] : ""; ?>';
+                                                                                                                        });
+                                                                                                            } else {
+                                                                                                                if (response.error) {
+                                                                                                                    swal("<?php echo __("Sorry!"); ?>", response.error, "error");
+                                                                                                                } else {
+                                                                                                                    swal("<?php echo __("Sorry!"); ?>", "<?php echo __("Your user has NOT been created!"); ?>", "error");
+                                                                                                                }
+                                                                                                            }
+                                                                                                            modal.hidePleaseWait();
+                                                                                                        }
+                                                                                                    });
+                                                                                                    return false;
+                                                                                                }
+                                                                                            });
+                                                                                        });
             </script>
         </div><!--/.container-->
 

@@ -55,6 +55,7 @@ class CustomizeAdvanced extends PluginAbstract {
         $obj->doNotShowWebsiteOnContactForm = false;
         $obj->doNotUseXsendFile = false;
         $obj->makeVideosInactiveAfterEncode = false;
+        $obj->makeVideosUnlistedAfterEncode = false;
         $obj->usePermalinks = false;
         $obj->disableAnimatedGif = false;
         $obj->removeBrowserChannelLinkFromMenu = false;
@@ -148,6 +149,12 @@ class CustomizeAdvanced extends PluginAbstract {
         $obj->disableHTMLDescription = false;
         $obj->disableTopMenusInsideIframe = true;
         $obj->disableVideoSwap = false;
+        
+        $parse = parse_url($global['webSiteRootURL']);
+        $domain = str_replace(".", "", $parse['host']);
+        $obj->twitter_site = "@{$domain}";
+        $obj->twitter_player = true;
+        $obj->twitter_summary_large_image = false;
                 
         return $obj;
     }

@@ -450,9 +450,10 @@ function setSiteSendMessage(&$mail) {
     global $global;
     require_once $global['systemRootPath'] . 'objects/configuration.php';
     $config = new Configuration();
-
+    $mail->CharSet = 'UTF-8';
     if ($config->getSmtp()) {
         _error_log("Sending SMTP Email");
+        $mail->CharSet = 'UTF-8';
         $mail->IsSMTP(); // enable SMTP
         $mail->SMTPAuth = $config->getSmtpAuth(); // authentication enabled
         $mail->SMTPSecure = $config->getSmtpSecure(); // secure transfer enabled REQUIRED for Gmail
@@ -494,6 +495,9 @@ function sendSiteEmail($to, $subject, $message) {
     if (empty($to)) {
         return false;
     }
+
+    $subject = UTF8encode($subject);
+    $message = UTF8encode($message);
 
     _error_log("sendSiteEmail [" . count($to) . "] {$subject}");
     global $config, $global;
@@ -1446,6 +1450,8 @@ function decideMoveUploadedToVideos($tmp_name, $filename) {
 
 function unzipDirectory($filename, $destination) {
     global $global;
+    // wait a couple of seconds to make sure the file is completed transfer
+    sleep(2);
     ini_set('memory_limit', '-1');
     ini_set('max_execution_time', 7200); // 2 hours
     $cmd = "unzip {$filename} -d {$destination}" . "  2>&1";
@@ -1928,10 +1934,12 @@ function siteMap() {
 
     $xml = '<?xml version="1.0" encoding="UTF-8"?>
     <urlset
-        xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd
+        http://www.w3.org/1999/xhtml http://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"
+        xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
         <!-- Main Page -->
         <url>
             <loc>' . $global['webSiteRootURL'] . '</loc>
@@ -2001,18 +2009,57 @@ function siteMap() {
     $_POST['rowCount'] = $advancedCustom->siteMapRowsLimit * 10;
     $_POST['sort']['created'] = "DESC";
     $rows = Video::getAllVideos(!empty($advancedCustom->showPrivateVideosOnSitemap) ? "viewableNotUnlisted" : "publicOnly");
-    foreach ($rows as $value) {
-        $xml .= '   
+    foreach ($rows as $video) {
+        $videos_id = $video['id'];
+        $source = Video::getSourceFile($video['filename']);
+        if (($video['type'] !== "audio") && ($video['type'] !== "linkAudio") && !empty($source['url'])) {
+            $img = $source['url'];
+            $data = getimgsize($source['path']);
+            $imgw = $data[0];
+            $imgh = $data[1];
+        } else if ($video['type'] == "audio") {
+            $img = "{$global['webSiteRootURL']}view/img/audio_wave.jpg";
+        }
+        $type = 'video';
+        if ($video['type'] === 'pdf') {
+            $type = 'pdf';
+        }
+        if ($video['type'] === 'article') {
+            $type = 'article';
+        }
+        $images = Video::getImageFromFilename($video['filename'], $type);
+        if (!empty($images->posterPortrait) && basename($images->posterPortrait) !== 'notfound_portrait.jpg' && basename($images->posterPortrait) !== 'pdf_portrait.png' && basename($images->posterPortrait) !== 'article_portrait.png') {
+            $img = $images->posterPortrait;
+            $data = getimgsize($images->posterPortraitPath);
+            $imgw = $data[0];
+            $imgh = $data[1];
+        } else {
+            $img = $images->poster;
+        }
+
+        $description = str_replace(array('"', "\n", "\r"), array('', ' ', ' '), empty(trim($video['description'])) ? $video['title'] : $video['description']);
+        $duration = parseDurationToSeconds($video['duration']);
+        $xml .= '
             <url>
-                <loc>' . Video::getLink($value['id'], $value['clean_title']) . '</loc>
-                <lastmod>' . $date . '</lastmod>
-                <changefreq>monthly</changefreq>
-                <priority>0.80</priority>
+                <loc>' . Video::getLink($video['id'], $video['clean_title']) . '</loc>
+                <video:video>
+                    <video:thumbnail_loc>' . $img . '</video:thumbnail_loc>
+                    <video:title>' . str_replace('"', '', $video['title']) . '</video:title>
+                    <video:description>' . (strip_tags($description)) . '</video:description>
+                    <video:player_loc>' . htmlentities(parseVideos(Video::getLinkToVideo($videos_id))) . '</video:player_loc>
+                    <video:duration>' . $duration . '</video:duration>
+                    <video:view_count>' . $video['views_count'] . '</video:view_count>
+                    <video:publication_date>' . date("Y-m-d\TH:i:s", strtotime($video['created'])) . '+00:00</video:publication_date>
+                    <video:family_friendly>yes</video:family_friendly>
+                    <video:requires_subscription>' . (Video::isPublic($video['id'])?"no":"yes") . '</video:requires_subscription>
+                    <video:uploader info="' . User::getChannelLink($video['users_id']) . '">' . User::getNameIdentificationById($video['users_id']) . '</video:uploader>
+                    <video:live>no</video:live>
+                </video:video>
             </url>
             ';
     }
     $xml .= '</urlset> ';
-    return $xml;
+    return preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', '', $xml));
 }
 
 function object_to_array($obj) {
@@ -2199,7 +2246,7 @@ function isToHidePrivateVideos() {
 }
 
 function getOpenGraph($videos_id) {
-    global $global, $config;
+    global $global, $config, $advancedCustom;
     echo "<!-- OpenGraph -->";
     if (empty($videos_id)) {
         echo "<!-- OpenGraph no video id -->";
@@ -2243,6 +2290,7 @@ function getOpenGraph($videos_id) {
     } else {
         $img = $images->poster;
     }
+    $twitter_site = $advancedCustom->twitter_site;
     ?>
     <link rel="image_src" href="<?php echo $img; ?>" />
     <meta property="og:image" content="<?php echo $img; ?>" />
@@ -2276,6 +2324,33 @@ function getOpenGraph($videos_id) {
     ?>
     <meta property="video:duration" content="<?php echo Video::getItemDurationSeconds($video['duration']); ?>"  />
     <meta property="duration" content="<?php echo Video::getItemDurationSeconds($video['duration']); ?>"  />
+
+    <!-- Twitter cards -->
+    <?php
+    if (!empty($advancedCustom->twitter_player)) {
+        ?>
+        <meta name="twitter:card" content="player" />
+        <meta name="twitter:player" content="<?php echo Video::getLinkToVideo($videos_id, $video['clean_title'], true); ?>" />
+        <meta name="twitter:player:width" content="480" />
+        <meta name="twitter:player:height" content="480" />    
+        <?php
+    } else {
+        if (!empty($advancedCustom->twitter_summary_large_image)) {
+            ?>
+            <meta name="twitter:card" content="summary_large_image" />   
+            <?php
+        } else {
+            ?>
+            <meta name="twitter:card" content="summary" />   
+            <?php
+        }
+    }
+    ?>
+    <meta name="twitter:site" content="<?php echo $twitter_site; ?>" />
+    <meta name="twitter:url" content="<?php echo Video::getLinkToVideo($videos_id); ?>"/>
+    <meta name="twitter:title" content="<?php echo str_replace('"', '', $video['title']); ?>"/>
+    <meta name="twitter:description" content="<?php echo str_replace('"', '', $video['description']); ?>"/>
+    <meta name="twitter:image" content="<?php echo $img; ?>"/>
     <?php
 }
 
@@ -2633,12 +2708,108 @@ function getUsageFromFilename($filename, $dir = "") {
     $files = glob("{$dir}{$filename}*");
     foreach ($files as $f) {
         if (is_dir($f)) {
+            _error_log("getUsageFromFilename: {$f} is Dir");
             $totalSize += getDirSize($f);
         } else if (is_file($f)) {
-            $totalSize += filesize($f);
+            $filesize = filesize($f);
+            if ($filesize < 20) { // that means it is a dummy file
+                _error_log("getUsageFromFilename: {$f} is Dummy file ({$filesize})");
+                $aws_s3 = AVideoPlugin::loadPluginIfEnabled('AWS_S3');
+                //$bb_b2 = AVideoPlugin::loadPluginIfEnabled('Blackblaze_B2');
+                if (!empty($aws_s3)) {
+                    _error_log("getUsageFromFilename: Get from S3");
+                    $filesize += $aws_s3->getFilesize($filename);
+                } else if (!empty($bb_b2)) {
+                    // TODO
+                } else {
+                    $urls = Video::getVideosPaths($filename, true);
+                    _error_log("getUsageFromFilename: Paths " . json_encode($urls));
+                    if (!empty($urls["m3u8"]['url'])) {
+                        $filesize+=getUsageFromURL($urls["m3u8"]['url']);
+                    }
+                    if (!empty($urls['mp4'])) {
+                        foreach ($urls['mp4'] as $mp4) {
+                            $filesize+=getUsageFromURL($mp4);
+                        }
+                    }
+                    if (!empty($urls['webm'])) {
+                        foreach ($urls['webm'] as $mp4) {
+                            $filesize+=getUsageFromURL($mp4);
+                        }
+                    }
+                    if (!empty($urls["pdf"]['url'])) {
+                        $filesize+=getUsageFromURL($urls["pdf"]['url']);
+                    }
+                    if (!empty($urls["mp3"]['url'])) {
+                        $filesize+=getUsageFromURL($urls["mp3"]['url']);
+                    }
+                }
+            } else {
+                _error_log("getUsageFromFilename: {$f} is File ({$filesize})");
+            }
+            $totalSize += $filesize;
         }
     }
     return $totalSize;
+}
+
+/**
+ * Returns the size of a file without downloading it, or -1 if the file
+ * size could not be determined.
+ *
+ * @param $url - The location of the remote file to download. Cannot
+ * be null or empty.
+ *
+ * @return The size of the file referenced by $url, or false if the size
+ * could not be determined.
+ */
+function getUsageFromURL($url) {
+    _error_log("getUsageFromURL: start ({$url})");
+    // Assume failure.
+    $result = false;
+
+    $curl = curl_init($url);
+
+    _error_log("getUsageFromURL: curl_init ");
+
+    try {
+        // Issue a HEAD request and follow any redirects.
+        curl_setopt($curl, CURLOPT_NOBODY, true);
+        curl_setopt($curl, CURLOPT_HEADER, true);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+        //curl_setopt($curl, CURLOPT_USERAGENT, get_user_agent_string());
+        $data = curl_exec($curl);
+    } catch (Exception $exc) {
+        echo $exc->getTraceAsString();
+        _error_log("getUsageFromURL: ERROR " . $exc->getMessage());
+        _error_log("getUsageFromURL: ERROR " . curl_errno($curl));
+        _error_log("getUsageFromURL: ERROR " . curl_error($curl));
+    }
+
+    if ($data) {
+        _error_log("getUsageFromURL: response header " . $data);
+        $content_length = "unknown";
+        $status = "unknown";
+
+        if (preg_match("/^HTTP\/1\.[01] (\d\d\d)/", $data, $matches)) {
+            $status = (int) $matches[1];
+        }
+
+        if (preg_match("/Content-Length: (\d+)/", $data, $matches)) {
+            $content_length = (int) $matches[1];
+        }
+
+        // http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+        if ($status == 200 || ($status > 300 && $status <= 308)) {
+            $result = $content_length;
+        }
+    } else {
+        _error_log("getUsageFromURL: ERROR no response data " . curl_error($curl));
+    }
+
+    curl_close($curl);
+    return $result;
 }
 
 function getDirSize($dir) {

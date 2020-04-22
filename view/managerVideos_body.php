@@ -71,12 +71,12 @@
                                 
                             }
                             ?>
-                            <form id="formEncoder" method="post" action="<?php echo $config->getEncoderURL(); ?>" target="encoder">
+                            <form id="formEncoderVideosM" method="post" action="<?php echo $config->getEncoderURL(); ?>" target="encoder">
                                 <input type="hidden" name="webSiteRootURL" value="<?php echo $global['webSiteRootURL']; ?>" />
                                 <input type="hidden" name="user" value="<?php echo User::getUserName(); ?>" />
                                 <input type="hidden" name="pass" value="<?php echo User::getUserPass(); ?>" />
                             </form>
-                            <a href="#" onclick="$('#formEncoder').submit();return false;" class="btn btn-sm btn-xs btn-default">
+                            <a href="#" onclick="$('#formEncoderVideosM').submit();return false;" class="btn btn-sm btn-xs btn-default">
                                 <span class="fa fa-cog"></span> <?php echo empty($advancedCustom->encoderButtonLabel) ? __("Encode video and audio") : $advancedCustom->encoderButtonLabel; ?>
                             </a>
                             <?php
@@ -228,6 +228,12 @@
                     ?>
                     <button class="btn btn-primary" id="swapBtn">
                         <i class="fas fa-random"></i> <?php echo __('Swap Video File'); ?>
+                    </button>
+                    <?php
+                }
+                if (User::isAdmin()){ ?>
+                    <button class="btn btn-primary" id="updateAllUsage">
+                        <i class="fas fa-chart-line"></i> <?php echo __('Update all videos disk usage'); ?>
                     </button>
                     <?php
                 }
@@ -966,7 +972,10 @@ echo AVideoPlugin::getManagerVideosEdit();
             $('#inputNextVideoClean').val("<?php echo $global['webSiteRootURL']; ?>video/" + row.next_video.clean_title);
             $('#inputNextVideo-id').val(row.next_video.id);
         } else {
-            $('#removeAutoplay').trigger('click');
+            try {
+                $('#removeAutoplay').trigger('click');
+            }
+            catch(e){}
         }
 
 
@@ -1715,7 +1724,39 @@ if (empty($advancedCustom->disableVideoSwap)) {
             });
     <?php
 }
+if (User::isAdmin()) {
+    ?>
+
+            $("#updateAllUsage").click(function () {
+                modal.showPleaseWait();
+
+                $.ajax({
+                    url: '<?php echo $global['webSiteRootURL']; ?>objects/videoUpdateUsage.json.php',
+                    success: function (response) {
+                        modal.hidePleaseWait();
+                        if (response.error) {
+                            swal({
+                                title: "<?php echo __("Sorry!"); ?>",
+                                text: response.error,
+                                type: "error",
+                                html: true
+                            });
+                        } else {
+                            swal({
+                                title: "<?php echo __("Success!"); ?>",
+                                text: "<?php echo __("Videos Updated!"); ?>",
+                                type: "success",
+                                html: true
+                            });
+                            $("#grid").bootgrid("reload");
+                        }
+                    }
+                });
+            });
+    <?php
+}
 ?>
+        
         $('.datepicker').datetimepicker({
             format: 'yyyy-mm-dd hh:ii',
             autoclose: true
