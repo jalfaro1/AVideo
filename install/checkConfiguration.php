@@ -139,7 +139,6 @@ if(!empty(\$_SERVER['SERVER_NAME']) && \$_SERVER['SERVER_NAME']!=='localhost' &&
 }
 \$global['systemRootPath'] = '{$_POST['systemRootPath']}';
 \$global['salt'] = '{$_POST['salt']}';
-\$global['disableTimeFix'] = 0;
 \$global['enableDDOSprotection'] = 1;
 \$global['ddosMaxConnections'] = 40;
 \$global['ddosSecondTimeout'] = 5;

@@ -68,18 +68,12 @@ class CustomizeUser extends PluginAbstract {
         $obj->doNotShowLeftProfile = false;
 
         $obj->forceLoginToBeTheEmail = false;
-        $obj->emailMustBeUnique = false;
 
         // added on 2019-02-11
         $o = new stdClass();
         $o->type = "textarea";
         $o->value = "";
         $obj->messageToAppearBelowLoginBox = $o;
-        
-        $o = new stdClass();
-        $o->type = "textarea";
-        $o->value = "";
-        $obj->messageToAppearAboveSignUpBox = $o;
 
         $obj->keepViewerOnChannel = false;
         $obj->showLeaveChannelButton = false;
@@ -298,9 +292,6 @@ class CustomizeUser extends PluginAbstract {
 
     public function getModeYouTube($videos_id) {
         global $global, $config;
-        if(empty($videos_id)){
-            return false;
-        }
         $cansee = User::canWatchVideoWithAds($videos_id);
         $obj = $this->getDataObject();
         if (!$cansee) {

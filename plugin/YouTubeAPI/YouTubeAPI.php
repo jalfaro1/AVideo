@@ -79,7 +79,7 @@ class YouTubeAPI extends PluginAbstract {
             $page = intval($_GET['page']);
         }
         $name = "YouTubeAPI-ListVideos-{$page}-" . md5(@$_GET['search']);
-        $cache = ObjectYPT::getCache($name, $youTubeObj->cacheTimeout);
+        $cache = ObjectYPT::getSessionCache($name, $youTubeObj->cacheTimeout);
 
         if (empty($cache)) {
             require_once $global['systemRootPath'] . 'plugin/YouTubeAPI/youtube-api/autoload.php';
@@ -152,6 +152,7 @@ class YouTubeAPI extends PluginAbstract {
                 }
                 if (!empty($object->videos)) {
                     $object->error = false;
+                    ObjectYPT::setSessionCache($name, $object);
                     ObjectYPT::setCache($name, $object);
                 } else {
                     $oldCache = ObjectYPT::getCache($name, 0);

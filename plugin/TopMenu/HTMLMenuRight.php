@@ -20,7 +20,7 @@ foreach ($menu as $key => $value) {
                 <?php
             }
             ?>
-            <span class="hidden-md hidden-sm  hidden-mdx">
+            <span class="hidden-md hidden-sm">
                 <?php echo $value['menuName']; ?>
             </span>
             <b class="caret"></b>

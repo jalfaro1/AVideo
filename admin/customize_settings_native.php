@@ -77,7 +77,7 @@
         });
 
         logoCrop = $('#croppieLogo').croppie({
-            url: '<?php echo $global['webSiteRootURL'], $config->getLogo(); ?>?'+Math.random(),
+            url: '<?php echo $global['webSiteRootURL'], $config->getLogo(); ?>',
             enableExif: true,
             enforceBoundary: false,
             mouseWheelZoom: false,

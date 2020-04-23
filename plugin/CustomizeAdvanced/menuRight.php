@@ -1,6 +1,6 @@
-<li class="dropdown"  data-toggle="tooltip" title="<?php echo __("R Rating"); ?>" data-placement="bottom">
+<li class="dropdown">
     <a href="#" class=" btn btn-default dropdown-toggle   navbar-btn" data-toggle="dropdown">
-        <i class="fas fa-filter"></i>
+        <?php echo __("R Rating"); ?>
         <b class="caret"></b>
     </a>
     <ul class="dropdown-menu">

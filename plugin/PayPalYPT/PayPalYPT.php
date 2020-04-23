@@ -166,8 +166,8 @@ class PayPalYPT extends PluginAbstract {
         $notify_url = "{$global['webSiteRootURL']}plugin/PayPalYPT/ipn.php";
         // Create a new billing plan
         $plan = new Plan();
-        $plan->setName(substr(cleanString($name), 0, 126))
-                ->setDescription(substr(cleanString($name), 0, 126))
+        $plan->setName($name)
+                ->setDescription($name)
                 ->setType('INFINITE');
 
         $paymentDefinitionArray = array();
@@ -308,8 +308,8 @@ class PayPalYPT extends PluginAbstract {
             $startDate = date("Y-m-d\TH:i:s.000\Z", strtotime("+{$interval} {$frequency}"));
         }
         $agreement = new Agreement();
-        $agreement->setName(substr(cleanString($name), 0, 126))
-                ->setDescription(substr(cleanString($name), 0, 126))
+        $agreement->setName($name)
+                ->setDescription($name)
                 ->setStartDate($startDate);
 
         $plan = new Plan();
